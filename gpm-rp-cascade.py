@@ -58,7 +58,7 @@ cursor.execute(sql)
 
 # Find entries deleted from "BG Rand" playlists
 sql = """
-    SELECT `gpm_playlist_entries`.`dt_deleted`, `gpm_trackid`
+    SELECT `gpm_trackid`
     FROM `gpm_playlist_entries`
     JOIN `gpm_playlists` USING (`gpm_playlistid`)
     WHERE `gpm_playlist_entries`.`deleted` = 1
