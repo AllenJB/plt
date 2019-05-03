@@ -146,7 +146,7 @@ for pl in plcontents:
                 %(gpmPlaylistId)s, %(source)s, %(gpmTrackId)s, 1)
             ON DUPLICATE KEY UPDATE
                 `entryid` = LAST_INSERT_ID(`entryid`), 
-                `dt_created` = %(dtCreated)s, `dt_modified` = %(dtModified)s, `processed` = 1
+                `dt_created` = %(dtCreated)s, `dt_modified` = %(dtModified)s, `deleted` = 0, `processed` = 1
         """
         entryRecord = {
             "entryId": plentry["id"],

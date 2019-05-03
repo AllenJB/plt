@@ -1,3 +1,4 @@
+from datetime import datetime
 from gmusicapi import Mobileclient
 from gmusicapi.utils import utils
 import argparse
@@ -6,9 +7,20 @@ import pymysql.cursors
 import sys
 import config
 
+
+def valid_date(s):
+    try:
+        return datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        msg = "Not a valid date: '{0}'.".format(s)
+        raise argparse.ArgumentTypeError(msg)
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("-v", "--verbose", help="Increase output verbosity", action="store_true")
-
+parser.add_argument("-p", "--playlist", help="Playlist ID to undelete tracks from (required)", required=True)
+parser.add_argument("-d", "--date", help="Undelete tracks deleted after this date/time", required=True,
+                    type=valid_date)
 args = parser.parse_args()
 
 logger = logging.getLogger("app")
@@ -16,7 +28,7 @@ logger.setLevel(logging.DEBUG)
 logFormatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
 
 logHndFile = logging.FileHandler(
-    filename=config.log["dir"] + "gpm_rp-cascade.log",
+    filename=config.log["dir"] + "gpm_undelete.log",
     mode="w"
 )
 logHndFile.setLevel(logging.DEBUG)
@@ -56,45 +68,37 @@ sqlModes = ['ERROR_FOR_DIVISION_BY_ZERO', 'NO_ZERO_DATE', 'NO_ZERO_IN_DATE', 'ST
 sql = "SET time_zone='+00:00', sql_mode='" + ",".join(sqlModes) + "'"
 cursor.execute(sql)
 
-# Find entries deleted from "BG Rand" playlists
+playlistId = args.playlist
+dtStrRevert = args.date
+
+# Parameters: playlist id, date to revert to
 sql = """
-    SELECT `gpm_trackid`
-    FROM `gpm_playlist_entries`
-    JOIN `gpm_playlists` USING (`gpm_playlistid`)
-    WHERE `gpm_playlist_entries`.`deleted` = 1
-        AND `gpm_playlists`.`name` LIKE 'BG Rand %'
-        AND `gpm_playlists`.`deleted` = 0
+    SELECT gpm_trackid 
+    FROM gpm_playlist_entries
+    WHERE gpm_playlistid = %(playlistId)s
+        AND `dt_deleted` > %(dtRevert)s
 """
-cursor.execute(sql)
+params = {
+    "playlistId": playlistId,
+    "dtRevert": dtStrRevert,
+}
+cursor.execute(sql, params)
 deletedTracks = cursor.fetchall()
 
-# Foreach deleted entry, check if it's undeleted in any of the source playlists
-# If so, delete it
+logger.info("Undeleting " + str(len(deletedTracks)) + " tracks")
+
+trackIdsToAdd = []
 for row in deletedTracks:
     trackId = row[0]
-    sql = """
-        SELECT `gpm_entryid`
-        FROM `gpm_playlist_entries`
-        JOIN `gpm_playlists` USING (`gpm_playlistid`)
-        WHERE `gpm_playlists`.`deleted` = 0
-            AND `gpm_playlists`.`name` LIKE 'Background %'
-            AND `gpm_playlist_entries`.`deleted` = 0
-            AND `gpm_trackid` = $(trackId)s
-    """
-    params = {
-        "trackId": trackId,
-    }
-    cursor.execute(sql, params)
-    otherListEntries = cursor.fetchall()
+    trackIdsToAdd.append(row[0])
 
-    if len(otherListEntries) < 1:
-        continue
+    if len(trackIdsToAdd) >= 50:
+        gpm.add_songs_to_playlist(playlist_id=playlistId, song_ids=trackIdsToAdd)
+        trackIdsToAdd = []
 
-    logger.info("Deleted track " + trackId + " was found in another playlist... deleting")
-    otherEntryIds = []
-    for otherRow in otherListEntries:
-        otherEntryIds.append(otherRow[0])
-    logger.info("Deleting playlist entries: "+ ", ".join(otherEntryIds))
-    gpm.remove_entries_from_playlist(otherEntryIds)
+if len(trackIdsToAdd) >= 0:
+    gpm.add_songs_to_playlist(playlist_id=playlistId, song_ids=trackIdsToAdd)
+    trackIdsToAdd = []
 
 logger.info("DONE!")
+db.close()
