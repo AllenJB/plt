@@ -77,9 +77,9 @@ for row in deletedTracks:
         FROM `gpm_playlist_entries`
         JOIN `gpm_playlists` USING (`gpm_playlistid`)
         WHERE `gpm_playlists`.`deleted` = 0
-            AND `gpm_playlists`.`name` LIKE 'Background %'
+            AND `gpm_playlists`.`name` LIKE 'Background %%'
             AND `gpm_playlist_entries`.`deleted` = 0
-            AND `gpm_trackid` = $(trackId)s
+            AND `gpm_trackid` = %(trackId)s
     """
     params = {
         "trackId": trackId,
