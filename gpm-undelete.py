@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from gmusicapi import Mobileclient
 from gmusicapi.utils import utils
@@ -27,10 +28,15 @@ logger = logging.getLogger("app")
 logger.setLevel(logging.DEBUG)
 logFormatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
 
+logpath = config.log["dir"] + "gpm_undelete/"
+if not os.path.exists(logpath):
+    os.mkdir(logpath)
+
 logHndFile = logging.FileHandler(
-    filename=config.log["dir"] + "gpm_undelete.log",
-    mode="w"
+    filename=logpath + datetime.now().strftime("%Y-%m-%d_%H%M") + ".log",
+    mode="w",
 )
+
 logHndFile.setLevel(logging.DEBUG)
 logHndFile.setFormatter(logFormatter)
 logger.addHandler(logHndFile)
