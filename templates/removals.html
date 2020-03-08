@@ -1,0 +1,33 @@
+{% extends "layout/normal.html" %}
+{% block content %}
+    <h2>Recently Deleted</h2>
+    <table class="table table-hover table-striped">
+        <thead>
+        <tr>
+            <th class="title">Track Title</th>
+            <th class="artist">Track Artist</th>
+            <th class="duration_millis number">Duration</th>
+            <th class="track_type">Type</th>
+            <th class="playlist_name">Playlist</th>
+            <th class="dt_deleted datetime">Date Deleted</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for entry in recently_deleted %}
+            <tr>
+                <td class="title">{{ entry.title }}<br />{{ entry.album }}</td>
+                <td class="artist">
+                    {{ entry.artist }}<br />
+                    {%  if entry.album_artist != entry.artist %}
+                        {{  entry.album_artist }}
+                    {% endif %}
+                </td>
+                <td class="duration_millis number">{{ convert_millis(entry.duration_millis) }}</td>
+                <td class="type">{{ entry.track_type }}</td>
+                <td class="playlist_name">{{ entry.playlist_name }}</td>
+                <td class="dt_deleted datetime">{{ entry.dt_deleted }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
