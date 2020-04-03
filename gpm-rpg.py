@@ -6,6 +6,7 @@ import argparse
 import logging
 import pymysql.cursors
 import sys
+import time
 import config
 
 parser = argparse.ArgumentParser()
@@ -104,10 +105,13 @@ for row in trackRows:
     if len(trackIds) >= 50:
         gpm.add_songs_to_playlist(playlist_id=playlistId, song_ids=trackIds)
         trackIds = []
+        logger.debug("Added 50 tracks to playlist")
+        time.sleep(10)
 
 
 if len(trackIds) > 0:
     gpm.add_songs_to_playlist(playlist_id=playlistId, song_ids=trackIds)
+    logger.debug("Added remaining " + str(len(trackIds)) + " tracks to playlist")
 
 logger.info("DONE!")
 db.close()
