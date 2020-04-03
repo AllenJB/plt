@@ -264,12 +264,13 @@ def upsert_playlist(pl, cursor):
     sql = """
         INSERT INTO `gpm_playlists`
         (`gpm_playlistid`, `dt_created`, `dt_modified`, `deleted`, `dt_recent`, `access_controlled`, `kind`, 
-            `name`, `description`, `owner_name`, `share_token`, `type`)
+            `name`, `description`, `owner_name`, `share_token`, `type`, `processed`)
         VALUES (%(gpmid)s, %(dtCreated)s, %(dtModified)s, %(deleted)s, %(dtRecent)s, %(accessControlled)s, %(kind)s,
-            %(name)s, %(description)s, %(ownerName)s, %(shareToken)s, %(type)s)
+            %(name)s, %(description)s, %(ownerName)s, %(shareToken)s, %(type)s, 1)
         ON DUPLICATE KEY UPDATE `playlistid` = LAST_INSERT_ID(`playlistid`),
           `name` = %(name)s, `description` = %(description)s, 
-          `dt_modified` = %(dtModified)s, `dt_recent` = %(dtRecent)s, `deleted` = %(deleted)s
+          `dt_modified` = %(dtModified)s, `dt_recent` = %(dtRecent)s, `deleted` = %(deleted)s,
+          `processed` = 1
     """
     pl_record = {
         "gpmid": pl["id"],
@@ -446,7 +447,7 @@ def convert_millis(millis):
     return "{1:d}:{2:02d}".format(hours, minutes, seconds)
 
 
-def notify_deleted(smtp_config, cursor):
+def notify_deleted(smtp_config, cursor, logger):
     sql = """
         SELECT gpm_tracks.title, gpm_tracks.track_type, gpm_tracks.duration_millis, gpm_tracks.artist,
             gpm_playlist_entries.gpm_playlistid, gpm_playlists.`name` AS `playlist_name`,
@@ -470,7 +471,8 @@ def notify_deleted(smtp_config, cursor):
 
     html_content = """
         <html><body><p>Deleted Playlist Entries:</p>
-            <thead>
+        <table>
+        <thead>
         <tr>
             <th class="title">Track Title</th>
             <th class="artist">Track Artist</th>
@@ -483,23 +485,23 @@ def notify_deleted(smtp_config, cursor):
     """
 
     for trackEntry in deleted_entries:
-        if trackEntry.album_artist == trackEntry.artist:
-            trackEntry.album_artist = ""
+        if trackEntry["album_artist"] == trackEntry["artist"]:
+            trackEntry["album_artist"] = ""
 
-        trackEntry.duration = convert_millis(trackEntry.duration_millis)
+        trackEntry["duration"] = convert_millis(trackEntry["duration_millis"])
 
         html_content += """
             <tr>
-                <td class="title">{entry.title}<br />{entry.album}</td>
+                <td class="title">{title}<br />{album}</td>
                 <td class="artist">
-                    {entry.artist}<br />
-                    {entry.album_artist}
+                    {artist}<br />
+                    {album_artist}
                 </td>
-                <td class="duration_millis number">{entry.duration}</td>
-                <td class="type">{entry.track_type}</td>
-                <td class="playlist_name">{entry.playlist_name}</td>
+                <td class="duration_millis number">{duration}</td>
+                <td class="type">{track_type}</td>
+                <td class="playlist_name">{playlist_name}</td>
             </tr>
-        """.format(entry=trackEntry)
+        """.format(**trackEntry)
 
     html_content += "</tbody></table><p>---EOM</p></body></html>"
 
@@ -566,7 +568,8 @@ def main():
         user=config.db["username"],
         password=config.db["password"],
         db=config.db["database"],
-        autocommit=True
+        autocommit=True,
+        cursorclass=pymysql.cursors.DictCursor
     )
 
     cursor = db.cursor()
@@ -574,6 +577,9 @@ def main():
     sql_modes = ['ERROR_FOR_DIVISION_BY_ZERO', 'NO_ZERO_DATE', 'NO_ZERO_IN_DATE', 'STRICT_ALL_TABLES',
                  'ONLY_FULL_GROUP_BY', 'NO_AUTO_CREATE_USER', 'NO_ENGINE_SUBSTITUTION']
     sql = "SET time_zone='+00:00', sql_mode='" + ",".join(sql_modes) + "'"
+    cursor.execute(sql)
+
+    sql = "UPDATE `gpm_playlists` SET `processed` = 0 WHERE 1=1"
     cursor.execute(sql)
 
     sql = "UPDATE `gpm_playlist_entries` SET `processed` = 0 WHERE 1=1"
@@ -585,9 +591,17 @@ def main():
     # Process playlists & entries
     fetch_playlist_tracks(gpm, cursor, logger, only_list_id)
 
-    notify_deleted(config.smtp, cursor)
+    notify_deleted(config.smtp, cursor, logger)
     # Mark all unprocessed entries as deleted
     if only_list_id is None:
+        sql = """
+            UPDATE `gpm_playlists` SET `deleted` = 1, `dt_deleted` = NOW()
+            WHERE `processed` = 0
+                AND `deleted` = 0
+        """
+        deleted = cursor.execute(sql)
+        logger.info("deleted playlists: " + str(deleted))
+
         sql = """
             UPDATE `gpm_playlist_entries` SET `deleted` = 1, `dt_deleted` = NOW()
             WHERE `processed` = 0
