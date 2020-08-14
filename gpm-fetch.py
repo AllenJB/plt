@@ -575,7 +575,7 @@ def main():
     cursor = db.cursor()
 
     sql_modes = ['ERROR_FOR_DIVISION_BY_ZERO', 'NO_ZERO_DATE', 'NO_ZERO_IN_DATE', 'STRICT_ALL_TABLES',
-                 'ONLY_FULL_GROUP_BY', 'NO_AUTO_CREATE_USER', 'NO_ENGINE_SUBSTITUTION']
+                 'ONLY_FULL_GROUP_BY', 'NO_ENGINE_SUBSTITUTION']
     sql = "SET time_zone='+00:00', sql_mode='" + ",".join(sql_modes) + "'"
     cursor.execute(sql)
 
