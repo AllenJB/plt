@@ -1,3 +1,4 @@
 .idea
 config.py
 data/*
+ytm_auth.json

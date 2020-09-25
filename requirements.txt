@@ -1,0 +1,4 @@
+ytmusicapi~=0.9.1
+PyMySQL~=0.9.3
+Flask~=1.0.3
+gmusicapi~=12.1.0

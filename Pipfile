@@ -14,8 +14,9 @@ verify_ssl = true
 gmusicapi = "*"
 pymysql = "*"
 flask = "*"
+ytmusicapi = "*"
 
 
 [requires]
 
-python_version = "3.6"
+python_version = "3.7"
