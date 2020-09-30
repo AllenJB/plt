@@ -171,21 +171,21 @@ def upsert_playlist_entry(ytm_playlist_id, plentry, cursor, logger):
         return
 
     artist_names = []
-    artist_ids_all_null = 1
     if plentry["artists"] is not None:
         for artistEntry in plentry["artists"]:
             artist_names.append(artistEntry["name"])
-            if artistEntry["id"] is not None:
-                artist_ids_all_null = 0
     else:
         logger.debug("No artist data")
         logger.debug(pformat(plentry))
 
-    unavailable = (
-        artist_ids_all_null
-        and (plentry["album"] is None or plentry["album"]["id"] is None)
-        and plentry["videoId"] is None
-    )
+    unavailable = (plentry["videoId"] is None)
+
+    if plentry["duration"] is not None:
+        parts = plentry["duration"].split(":")
+        if len(parts) == 1:
+            plentry["duration"] = "00:00" + plentry["duration"]
+        elif len(parts) == 2:
+            plentry["duration"] = "00:" + plentry["duration"]
 
     album_name = None
     if plentry["album"] is None:
@@ -241,6 +241,13 @@ def upsert_playlist_entry_unavailable(ytm_playlist_id, plentry, cursor, logger):
         logger.warning(pformat(plentry))
     else:
         album_name = plentry["album"]["name"]
+
+    if plentry["duration"] is not None:
+        parts = plentry["duration"].split(":")
+        if len(parts) == 1:
+            plentry["duration"] = "00:00" + plentry["duration"]
+        elif len(parts) == 2:
+            plentry["duration"] = "00:" + plentry["duration"]
 
     sql = """
         INSERT INTO `ytm_playlist_entries_unavailable`

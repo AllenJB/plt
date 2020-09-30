@@ -22,6 +22,9 @@
         body {
             font-size: 12px;
         }
+        form {
+            font-size: 16px;
+        }
 
         .navbar-item {
             margin-right: 20px;
@@ -46,9 +49,24 @@
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav mr-auto">
             <li class="nav-item">
-                <a class="nav-link" href="/">
+                <a class="nav-link" href="/gpm">
+                    <i class="fab fa-google-play"></i>
                     <i class="fas fa-rss-square"></i>
-                    Removals
+                    GPM Removals
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/ytm/deleted">
+                    <i class="fab fa-youtube"></i>
+                    <i class="fas fa-rss-square"></i>
+                    YTM Removals
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/ytm/plsearch">
+                    <i class="fab fa-youtube"></i>
+                    <i class="fas fa-search"></i>
+                    YTM Playlist Search
                 </a>
             </li>
         </ul>
@@ -56,6 +74,7 @@
 </div>
 
 <div class="container-fluid">
+    {% include 'components/flash_messages.html' %}
     {% block content %}{% endblock %}
 </div>
 </body>

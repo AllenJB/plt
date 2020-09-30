@@ -1,0 +1,109 @@
+{% extends "layout/normal.html" %}
+{% block content %}
+    <style type="text/css">
+    .artist {
+        white-space: pre-line;
+    }
+    </style>
+    <h2>PlayList Search</h2>
+    <form method="post">
+    <div class="form-row">
+        <div class="form-group row col-md-10">
+            <label for="plsearch_term" class="col-md-2 col-form-label">Search:</label>
+            <div class="col-md-10">
+                <input type="text" class="form-control" id="plsearch_term"
+                    name="term" value="{{ term | default("", true) }}" />
+            </div>
+        </div>
+        <div class="form-group col-md-2">
+            <button type="submit" class="btn btn-primary">
+                <i class="fa fa-search"></i>
+                Search
+            </button>
+        </div>
+    </div>
+    </form>
+    <table class="table table-hover table-striped">
+    <thead>
+    <tr>
+        <th class="title">Track Title</th>
+        <th class="artist">Track Artist</th>
+        <th class="duration number">Duration</th>
+        <th class="when">Date Played</th>
+        <th class="action remove">&nbsp;</th>
+    </tr>
+    </thead>
+    <tbody>
+        {% if history is not none %}
+            {% for entry in history %}
+                <tr>
+                    <td class="title">{{ entry.title }}<br />{{ entry.album.name }}</td>
+                    <td class="artist">{{ ytm_list_artist_names(entry) }}</td>
+                    <td class="duration number">{{ entry.duration }}</td>
+                    <td class="when">{{ entry.played }}</td>
+                    <td class="action remove">
+                        {% if entry.playlists|length > 0 %}
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" data-toggle="dropdown"
+                                    title="Remove from Playlist">
+                                    <i class="fa fa-list"></i> <i class="far fa-trash-alt"></i>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-right">
+                                    {% if entry.playlists|length > 1 %}
+                                        <a class="dropdown-item"
+                                            href="/ytm/remove?videoId={{ entry.videoId }}&amp;playlistId=ALL">
+                                            ALL
+                                        </a>
+                                    {% endif %}
+                                    {% for playlist in entry.playlists %}
+                                        <a class="dropdown-item"
+                                            href="/ytm/remove?setVideoId={{ playlist.ytm_set_videoid }}&amp;playlistId={{ playlist.ytm_playlistid }}">
+                                            {{ playlist.playlist_title }}
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        {% endif %}
+
+        {% if results is not none %}
+            {% for entry in results %}
+                <tr>
+                    <td class="title">{{ entry.entry_name }}<br />{{ entry.album_name }}</td>
+                    <td class="artist">{{ entry.artist_name }}</td>
+                    <td class="duration number">{{ entry.duration }}</td>
+                    <td class="when">N/A</td>
+                    <td class="action remove">
+                        {% if entry.playlists|length > 0 %}
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" data-toggle="dropdown"
+                                    title="Remove from Playlist">
+                                    <i class="fa fa-list"></i> <i class="far fa-trash-alt"></i>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-right">
+                                    {% if entry.playlists|length > 1 %}
+                                        <a class="dropdown-item"
+                                            href="/ytm/remove?videoId={{ entry.videoId }}&amp;playlistId=ALL">
+                                            ALL
+                                        </a>
+                                    {% endif %}
+                                    {% for playlist in entry.playlists %}
+                                        <a class="dropdown-item"
+                                            href="/ytm/remove?setVideoId={{ playlist.ytm_set_videoid }}&amp;playlistId={{ playlist.ytm_playlistid }}">
+                                            {{ playlist.playlist_title }}
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        {% endif %}
+    </tbody>
+    </table>
+
+{% endblock %}
