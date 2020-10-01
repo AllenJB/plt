@@ -3,3 +3,4 @@ config.py
 data/*
 ytm_auth.json
 /youtube-api/
+Pipfile.lock
