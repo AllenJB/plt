@@ -1,9 +1,13 @@
 import pymysql.cursors
 import config
+import sys
+import traceback
+from pprint import pformat
 from flask import Flask, flash, g, render_template, redirect, request, url_for
 from ytmusicapi import YTMusic
 
 app = Flask(__name__)
+app.secret_key = config.app["secret_key"]
 
 
 @app.route("/")
@@ -77,8 +81,16 @@ def ytm_plsearch():
     recently_played = None
     results = None
     if term is None:
-        recently_played = ytmusic.get_history()
-        recently_played = ytm_attach_playlists(recently_played, cursor)
+        try:
+            recently_played = ytmusic.get_history()
+            recently_played = ytm_attach_playlists(recently_played, cursor)
+        except KeyError as ex:
+            ex_type, ex_value, ex_trace = sys.exc_info()
+            flash(
+                "Failed to retrieve history: KeyError: " + str(ex) + "\n"
+                + ("".join(traceback.format_exception(ex_type, ex_value, ex_trace))),
+                "error"
+            )
     else:
         sql = """
             SELECT DISTINCT ytm_playlist_entries.entry_name, ytm_playlist_entries.duration, 
@@ -127,9 +139,9 @@ def ytm_remove():
 
     cursor = db_connect()
 
-    successCount = 0
-    failedCount = 0
-    lastFailedMsg = None
+    success_count = 0
+    failed_count = 0
+    last_failed_msg = None
     if playlistid == "ALL":
         if videoid is None:
             flash("Missing videoid", "error")
@@ -168,46 +180,53 @@ def ytm_remove():
             }
             status = ytmusic.remove_playlist_items(playlistId=playlistid, videos=[playlist_item])
             if status != "STATUS_SUCCEEDED":
-                failedCount += 1
-                lastFailedMsg = status
+                failed_count += 1
+                last_failed_msg = status
             else:
-                successCount += 1
+                success_count += 1
 
-        playlist_desc = str(successCount) + " playlists"
+        playlist_desc = str(success_count) + " playlists"
     else:
         if set_videoid is None:
             flash("Missing set_videoid", "error")
             return redirect(url_for("ytm_plsearch"))
 
         sql = """
-            SELECT DISTINCT entry_name, album_name, artist_name, playlist_title
+            SELECT DISTINCT ytm_videoid, entry_name, album_name, artist_name, playlist_title
             FROM ytm_playlist_entries
-            LEFT JOIN ytm_playlists ON ytm_playlist_entries.ytm_playlistid = ytm_playlists.playlistid
+            LEFT JOIN ytm_playlists ON ytm_playlist_entries.ytm_playlistid = ytm_playlists.ytm_playlistid
             WHERE ytm_set_videoid = %(setVideoId)s
+                AND ytm_playlist_entries.ytm_playlistid = %(playlistId)s
                 AND ytm_playlist_entries.deleted = 0
                 AND ytm_playlists.deleted = 0
             LIMIT 1 
         """
         params = {
+            "playlistId": playlistid,
             "setVideoId": set_videoid,
         }
         cursor.execute(sql, params)
         track = cursor.fetchone()
+        if track is None:
+            flash("Failed to find track info for setVideoId " + set_videoid + " in playlistId " + playlistid, "error")
+            return redirect(url_for("ytm_plsearch"))
+
         playlist_desc = track["playlist_title"]
 
         playlist_item = {
             "setVideoId": set_videoid,
+            "videoId": track["ytm_videoid"],
         }
         status = ytmusic.remove_playlist_items(playlistId=playlistid, videos=[playlist_item])
         if status != "STATUS_SUCCEEDED":
-            failedCount += 1
-            lastFailedMsg = status
+            failed_count += 1
+            last_failed_msg = status
         else:
-            successCount += 1
+            success_count += 1
 
-    if failedCount > 0:
-        flash("Failed to remove track from " + str(failedCount) + " playlists. Last response: " + lastFailedMsg, "error")
-    if successCount > 0:
+    if failed_count > 0:
+        flash("Failed to remove track from " + str(failed_count) + " playlists. Last response: " + last_failed_msg, "error")
+    if success_count > 0:
         flash(
             "Track removed: " + track["entry_name"] + " by " + track["artist_name"] + " from " + playlist_desc,
             "success"

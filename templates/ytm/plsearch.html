@@ -92,7 +92,7 @@
                                     {% endif %}
                                     {% for playlist in entry.playlists %}
                                         <a class="dropdown-item"
-                                            href="/ytm/remove?setVideoId={{ playlist.ytm_set_videoid }}&amp;playlistId={{ playlist.ytm_playlistid }}">
+                                            href="/ytm/remove?setVideoId={{ playlist.ytm_set_videoid }}&amp;videoId={{ entry.videoId }}&amp;playlistId={{ playlist.ytm_playlistid }}">
                                             {{ playlist.playlist_title }}
                                         </a>
                                     {% endfor %}
